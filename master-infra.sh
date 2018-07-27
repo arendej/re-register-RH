@@ -1,54 +1,43 @@
-#!/bin/bash
 # Unregister and Re-register .. for Red Hat Credentials change.
 # The course of action here is:
 # - capture, clean, register, attach subs, enable repos, done.
+--- # for the app nodes
+- hosts: infras
+  connection: ssh
+  become: yes
+  vars:
+    - rhuser: yourusername
+    - rhpass: yourpassword
+  tasks:
 
+  - name: update yum cache
+    shell: sudo yum makecache fast -q
 
-sudo yum makecache fast -q
+  - name: get subscriptions currently consumed
+    shell: "sudo subscription-manager list --consumed|egrep 'Name|Pool|Serial' > ~/previous-subs.txt"
+    run_once: yes
 
-#get subscription currently consumed
-sudo subscription-manager list --consumed|egrep 'Name|Pool|Serial' > ~/previous-subs.txt
+  - name: get repos to file
+    shell: "sudo yum repolist enabled|egrep -v 'repolist|Repodata'|tail -n +3|cut -d / -f 1 > ~/previous-repos.txt"
+    run_once: yes
 
-#get repos to file
-sudo yum repolist enabled|egrep -v 'repolist|Repodata'|tail -n +3|cut -d / -f 1 > ~/previous-repos.txt
+  - name: unregister & clean
+    shell: sudo subscription-manager unregister && sudo subscription-manager clean
 
-#show files generated
-echo "Captured Subscriptions & Repos to.."
-ls -trh |egrep 'previous-subs|previous-repos'
+  - name: register
+    shell: "sudo subscription-manager register --username={{ yourusername }} --password={{ yourpassword }}"
 
-#unregister
-echo -e "\nUnregistering.."
-sudo subscription-manager unregister
+  - name: attach subs
+    shell: 'OCP_POOL="$(sudo subscription-manager list --available --matches "*OpenShift*Infrastructure" | grep "Pool ID:" | awk {'print $3'}| awk 'FNR == 1 {print}')"'
 
-#clean
-echo -e "\nCleaning"
-sudo subscription-manager clean
+  - name: Add subscription pools
+    shell: sudo subscription-manager attach --pool=$OCP_POOL
 
-#register
-echo -e "\nRegistering"
-sudo subscription-manager register --username=$1 --password=$2
+  - name: clear repos
+    shell: 'sudo subscription-manager repos --disable="*"'
 
-#attach subs
+  - name: add repos
+    shell: sudo subscription-manager repos --enable rhel-7-server-rpms --enable rhel-7-server-extras-rpms --enable rhel-7-server-ose-3.7-rpms --enable rhel-7-fast-datapath-rpms
 
-ocp_pool="$(sudo subscription-manager list --available --matches "*OpenShift*Infrastructure" | grep "Pool ID:" | awk {'print $3'}| awk 'FNR == 1 {print}')"
-
-echo -e "\nAdding subscription pools"
-
-sudo subscription-manager attach --pool=$ocp_pool
-
-echo -e "\nAdding Repos\n"
-#setup repos
-sudo subscription-manager repos --disable="*"
-
-sudo subscription-manager repos --enable rhel-7-server-rpms --enable rhel-7-server-extras-rpms --enable rhel-7-server-ose-3.7-rpms --enable rhel-7-fast-datapath-rpms
-
-#for r in $(cat ~/previous-repos.txt); do
-#  sudo subscription-manager repos --enable $r
-#done
-
-#sudo subscription-manager repos --enable rhel-7-fast-datapath-rpms --enable rhel-7-server-extras-rpms --enable rhel-7-server-ose-3.7-rpms --enable rhel-7-server-rpms
-
-#complete
-echo -e "\nListing repos..\n"
-sudo yum repolist enabled
-sudo yum makecache fast
+  - name: update cache and list enabled repos
+    shell: sudo yum makecache fast && sudo subscription-manager repos --list-enabled
