@@ -1,0 +1,64 @@
+# Unregister and Re-register .. for Red Hat Credentials change.
+# The course of action here is:
+# - capture, clean, register, attach subs, enable repos, done.
+
+--- # for the app nodes
+- hosts: apps
+  connection: ssh
+  become: yes
+  vars:
+    - rhuser: yourusername
+    - rhpass: yourpassword
+  tasks:
+
+  - name: yum makecache
+    shell: yum makecache fast -q
+
+  #get subscription currently consumed
+  - name: list current subs and put them into a file
+    shell: subscription-manager list --consumed|egrep 'Name|Pool|Serial' > ~/previous-subs.txt
+
+  #get repos to file
+  - name: list current repos and put them into a file
+    shell: yum repolist enabled|egrep -v 'repolist|Repodata'|tail -n +3|cut -d / -f 1 > ~/previous-repos.txt
+
+  #show files generated
+#  - name list
+#  echo "Captured Subscriptions & Repos to.."
+#  ls -trh |egrep 'previous-subs|previous-repos'
+
+  #unregister
+  - name: unregister subscription manager
+    shell: subscription-manager unregister
+
+  - name: clean subscription manager
+    shell: sudo subscription-manager clean
+
+   #register
+  - name: register to subscription manager
+    shell: "subscription-manager register --username={{ rhuser }} --password={{ rhpass }}"
+
+#attach subs
+
+#ocp_pool="$(sudo subscription-manager list --available --matches "Red Hat OpenShift Container Platform,*" | grep "Pool ID:" | awk {'print $3'}| awk 'FNR == 1 {print}')"
+  - name: gather the ocp pool for app nodes
+    shell: sudo subscription-manager list --available --matches "Red Hat OpenShift Container Platform,*" | grep "Pool ID:" | awk {'print $3'}| awk 'FNR == 1 {print}'
+    register: ocppool
+
+  - name: attach the pool
+    shell: "subscription-manager attach --pool={{ ocppool }}"
+
+echo -e "\nAdding Repos\n"
+#setup repos
+sudo subscription-manager repos --disable="*"
+
+#for r in $(cat ~/previous-repos.txt); do
+#  sudo subscription-manager repos --enable $r
+#done
+
+sudo subscription-manager repos --enable rhel-7-fast-datapath-rpms --enable rhel-7-server-extras-rpms --enable rhel-7-server-ose-3.7-rpms --enable rhel-7-server-rpms
+
+#complete
+echo -e "\nListing repos..\n"
+sudo yum repolist enabled
+sudo yum makecache fast

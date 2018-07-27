@@ -1,0 +1,16 @@
+# sample inventory
+
+
+[infras]
+ocppm01
+ocppm02
+ocppm03
+
+ocppi01
+ocppi02
+ocppi03
+
+[apps]
+ocppa01
+ocppa02
+ocppa03
