@@ -1,7 +1,7 @@
-# re-register-RH
+# re-/ register-RH
 This helps register or re-register numerous RHEL servers for OpenShift install.
 
-## details
+## Details
 
 * Use ansible, combined with these scripts to unregister and re-register hosts under different Red Hat account credentials.
 * Uses the ansible cli with the ansible 'script' module, or you could use these with a playbook.
