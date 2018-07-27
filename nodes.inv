@@ -1,5 +1,5 @@
-# sample inventory
-
+# Sample inventory
+# Note that the Master and Infra nodes all live in the infras group, as subscriptions for those are the same kind.
 
 [infras]
 ocppm01
