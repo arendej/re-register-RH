@@ -48,17 +48,19 @@
   - name: attach the pool
     shell: "subscription-manager attach --pool={{ ocppool }}"
 
-echo -e "\nAdding Repos\n"
+#echo -e "\nAdding Repos\n"
 #setup repos
-sudo subscription-manager repos --disable="*"
+  - name: clear repos 
+    shell: 'sudo subscription-manager repos --disable="*"'
 
 #for r in $(cat ~/previous-repos.txt); do
 #  sudo subscription-manager repos --enable $r
 #done
-
-sudo subscription-manager repos --enable rhel-7-fast-datapath-rpms --enable rhel-7-server-extras-rpms --enable rhel-7-server-ose-3.7-rpms --enable rhel-7-server-rpms
+  - name: enable OCP repos (OCP 3.7)
+    shell: sudo subscription-manager repos --enable rhel-7-fast-datapath-rpms --enable rhel-7-server-extras-rpms --enable rhel-7-server-ose-3.7-rpms --enable rhel-7-server-rpms
 
 #complete
-echo -e "\nListing repos..\n"
-sudo yum repolist enabled
-sudo yum makecache fast
+#echo -e "\nListing repos..\n"
+
+  - name: update cache and list repos
+    shell: 'sudo subscription-manager repos --list-enabled; sudo yum makecache fast'
